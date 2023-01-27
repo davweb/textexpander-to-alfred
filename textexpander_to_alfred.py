@@ -9,11 +9,18 @@ import sys
 import tempfile
 from jinja2 import Environment, PackageLoader, select_autoescape
 
+TOKENS = {
+    '%key:return%': r'\n',
+    '%key:enter%': r'\n',
+    '%key:tab%': '',
+    '%Y%m%d': '{date:yyyyMMdd}',
+    '\n': r'\n'
+}
 
 def read_csv(csv_file):
     """Read a TextExpander CSV file and return a list of dictionaries"""
 
-    with open(csv_file, encoding='utf-8') as file:
+    with open(csv_file, encoding='utf-8-sig') as file:
         reader = csv.DictReader(file, fieldnames=['keyword', 'snippet', 'name'])
         return list(reader)
 
@@ -25,15 +32,25 @@ def render_snippet(env, snippet):
     return template.render(**snippet)
 
 
+def replace_tokens(snippet):
+    for before, after in TOKENS.items():
+        snippet = snippet.replace(before, after)
+
+    if '%' in snippet:
+        raise ValueError(f'Unknown token in snippet {snippet}')
+
+    return snippet
+
+
 def main():
     """Read options and convert TextExpander CSV file to Alfred .snippet file"""
 
     parser = argparse.ArgumentParser(
         description='Convert TextExpander CSV files to Alfred .alfredsnippets files.')
-    parser.add_argument('-c', '--text-expander-csv', required=True, help="TextExpander CSV file")
+    parser.add_argument('filename', help="TextExpander CSV file")
     args = parser.parse_args()
 
-    csv_file = args.text_expander_csv
+    csv_file = args.filename
 
     if not csv_file.endswith('.csv'):
         print(f'Error: File {csv_file} does not end with .csv', file=sys.stderr)
@@ -49,9 +66,12 @@ def main():
     #  Read TextExpander CSV file
     snippets = read_csv(csv_file)
 
-    #  Added a UUID to each snippet
     for snippet in snippets:
+        #  Added a UUID to each snippet
         snippet['uid'] = str(uuid.uuid4()).upper()
+
+        #  Replace TextExpander tokens with Alfred tokens
+        snippet['snippet'] = replace_tokens(snippet['snippet'])
 
     #  Initialise Jinja2
     env = Environment(
