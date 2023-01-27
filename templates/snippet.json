@@ -1,0 +1,8 @@
+{
+  "alfredsnippet" : {
+    "snippet" : "{{ snippet }}",
+    "uid" : "{{ uid }}",
+    "name" : "{{ name}}",
+    "keyword" : "{{ keyword }}"
+  }
+}
